@@ -91,7 +91,7 @@ Set next_phase: "socratic".
 
 
 def _socratic_prompt(term: SyllabusTerm, level: str, turn: int, is_stuck: bool, last_teacher_msg: str = "") -> str:
-    max_turns = max(len(term.questions), 4)
+    max_turns = max(len(term.questions), 15)
     last_call = turn >= max_turns - 1
 
     # Map turn → teaching stage
@@ -130,22 +130,23 @@ def _socratic_prompt(term: SyllabusTerm, level: str, turn: int, is_stuck: bool, 
 - Ask about design choices, derivations, edge cases, comparisons to alternatives
 - Good forms: "Why must this be differentiable?", "What breaks if this property doesn't hold?", "How does this compare to X approach?" """
 
-    # idk / stuck handling
     if is_stuck:
         stuck_block = f"""
-⚠️ STUDENT IS STUCK. Question they're stuck on: "{last_teacher_msg}"
+⚠️ STUDENT SAID "idk" — they are stuck on your last question: "{last_teacher_msg}"
 
-Diagnose the confusion — pick the most likely type:
-- TERM: a word in the question is unfamiliar
-- CONTEXT: the scenario itself isn't clear
-- REASONING: scenario is clear but the logical step to the answer isn't
+MANDATORY RESPONSE RULES (override everything else including final-turn instructions):
+1. Do NOT say "You're right" or acknowledge any previous correct answer — the student just said they don't know
+2. Do NOT give the full answer or explanation
+3. Do NOT set next_phase to "direct" or "teach_back"
+4. Do NOT repeat your previous question unchanged
 
-Then respond accordingly:
-- TERM → rephrase using only plain everyday language
-- CONTEXT → re-explain the scenario in one simpler sentence, different angle
-- REASONING → split the question into a smaller sub-question that targets just one step
+Your only job: ask ONE short diagnostic question to find out WHERE they're stuck.
+Choose the most natural one given the conversation:
+- "Which part of my question didn't make sense — the word I used, the example, or what I was asking you to figure out?"
+- "Is it the scenario that's unclear, or you see the scenario but don't know how to think about the answer?"
+- "Is there a word in my question that you're not sure about?"
 
-Do NOT give the answer. Do NOT advance to the next stage. Re-ask as a smaller, more concrete question."""
+One sentence only. Set next_phase: "wait", score_delta: 0."""
     else:
         stuck_block = ""
 
@@ -157,16 +158,15 @@ When the student's answer is wrong or only partially right:
 4. Ask a smaller follow-up question targeting that exact gap — do NOT re-ask the full question unchanged"""
 
     return f"""{TEACHER_PERSONA}
-
+{stuck_block}
 Teaching "{term.term}" | Stage: {stage} — {stage_goal}
 Learning goal: {term.learning_goal}
 Scenario (use this, never invent new numbers): {term.scenario}
 
 {level_rules}
 
-Turn {turn}/{max_turns}{"  ← FINAL TURN: wrap up this stage, then set next_phase: \"direct\"" if last_call else ""}
+Turn {turn}/{max_turns}{"  ← FINAL TURN: wrap up this stage, then set next_phase: \"direct\"" if last_call and not is_stuck else ""}
 {seed_hint}
-{stuck_block}
 
 How to respond (in order):
 1. React to what the student just said — 1 honest sentence, specific to their words, no hollow praise
@@ -185,42 +185,7 @@ Phase transitions:
 {OUTPUT_FORMAT}"""
 
 
-def _socratic_prompt(term: SyllabusTerm, turn: int, is_stuck: bool, last_teacher_msg: str = "") -> str:
-    max_turns = len(term.questions) if term.questions else 6
-    turns_left = max_turns - turn
-    last_call = turn >= max_turns - 1
 
-    # Pick the next pre-written question (turn is 1-indexed when called)
-    next_q_idx = min(turn, len(term.questions) - 1) if term.questions else -1
-    next_question = f'\nNext question to ask (use it, you may lightly rephrase for flow): "{term.questions[next_q_idx]}"' if next_q_idx >= 0 and not is_stuck else ""
-
-    stuck_instruction = ""
-    if is_stuck:
-        prev_q_context = f'The question the student is stuck on: "{last_teacher_msg}"\n' if last_teacher_msg else ""
-        stuck_instruction = f"""
-⚠️ STUDENT IS STUCK (said "idk" or very short answer).
-{prev_q_context}Give a one-sentence concrete hint using numbers from the scenario ({term.scenario}), then re-ask the same question in a simpler way.
-Do NOT move to the next question yet. Do NOT introduce new numbers or a new scenario."""
-
-    return f"""{TEACHER_PERSONA}
-
-You are continuing a lesson on "{term.term}".
-LEARNING GOAL: {term.learning_goal}
-Scenario (the one example to use throughout): {term.scenario}
-
-Turn: {turn}/{max_turns}{"  ← LAST TURN: give the answer directly, next_phase: direct" if last_call else f"  ({turns_left} left)"}
-{next_question}
-{stuck_instruction}
-
-Rules:
-- ALWAYS refer back to the scenario above — never invent new numbers or a new example
-- Respond to the student's answer first (1 sentence), then ask the next question
-- If student's answer reaches the learning goal → next_phase: "teach_back", score_delta: 10
-- If student shows partial understanding → next_phase: "wait", score_delta: 5
-- If student is stuck → give hint + re-ask same question, score_delta: 0, next_phase: "wait"
-- If this is the last turn → give the answer directly, next_phase: "direct"
-- Otherwise → next_phase: "wait"
-{OUTPUT_FORMAT}"""
 
 
 def _direct_prompt(term: SyllabusTerm, last_student_msg: str) -> str:
@@ -286,9 +251,11 @@ def _detect_stuck(state: LearningState) -> bool:
     for m in reversed(messages):
         if hasattr(m, "type") and m.type == "human" and m.content not in ("__start__", "__teach_back_start__"):
             s = m.content.strip().lower()
-            return (
-                s in ("idk", "i don't know", "i dont know", "no idea", "不知道", "不懂", "?", "??")
-                or len(s) <= 8
+            return s in (
+                "idk", "i don't know", "i dont know", "no idea", "don't know", "dont know",
+                "not sure", "no clue", "have no idea", "no idea at all",
+                "不知道", "不懂", "不清楚", "不会", "说不上来", "不太懂",
+                "?", "??", "???",
             )
     return False
 
