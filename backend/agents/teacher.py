@@ -39,41 +39,50 @@ score_reason: one short phrase, empty string if delta=0
 def _intro_prompt(term: SyllabusTerm, level: str) -> str:
     seed_q = term.questions[0] if term.questions else f"Why do you think we need {term.term}?"
 
+    # The scenario contains the full worked example including the solution.
+    # For the intro, only the PROBLEM SETUP should be visible — not the formula or answer.
+    # Extract just the situation (e.g. "prediction=0.8, truth=1.0") not the calculation.
+
     if level in ("novice", "beginner"):
         style = f"""Structure (one message, max 6 sentences):
-1. Open with a concrete real-world problem or observable failure — NOT a definition, NOT the term name yet.
-   Good openers: "Imagine you're trying to…", "Before X existed, the problem was…", "Here's what happens when this goes wrong: …"
-2. Set up this scenario exactly: {term.scenario}
-3. End with ONE question about WHY something like "{term.term}" might be needed.
-   The question must be answerable from intuition alone — zero prior knowledge required.
-   Seed idea (rephrase freely, make it feel natural): "{seed_q}"
+1. Open with a concrete, relatable failure or frustration — NOT a definition, NOT the term name.
+   Put the student in the situation first. Good openers:
+   - "Imagine you built something that guesses numbers, and it guessed {term.scenario.split('=')[0].strip() if term.scenario else 'something wrong'}…"
+   - "You trained a model. It gave an answer. But how do you know if the answer is close enough or way off?"
+   - Describe the gap/pain, not the solution.
+2. Use only the PROBLEM PART of this scenario (the situation, not the formula or result): {term.scenario}
+   Show the student the gap (e.g. predicted vs actual numbers) but do NOT compute or reveal the answer yet.
+3. End with ONE intuition question — answerable with zero prior knowledge, just common sense.
+   Seed idea: "{seed_q}"
 
-Do NOT define "{term.term}" yet. Do NOT use technical jargon. Build the need first."""
+FORBIDDEN in intro: the term name, any formula, any technical definition, the solution to the scenario."""
 
     elif level == "intermediate":
         style = f"""Structure (max 5 sentences):
-1. State the concrete problem this concept addresses — one sentence, outcome-focused.
-2. Set up this scenario: {term.scenario}
-3. End with a WHY question requiring light reasoning (what-if, trends, comparisons).
-   The student should be able to answer with basic math intuition, no formulas needed.
+1. Describe the concrete problem in one sentence — what breaks without this concept, outcome-focused, no jargon.
+   Do NOT start with "The problem is that we need X" — that's a definition. Start with the situation.
+   Good opener: "You have a prediction and a true answer. You want to know how wrong you are — but how?"
+2. Use the PROBLEM SETUP from this scenario (situation + numbers only, NOT the formula or result): {term.scenario}
+3. End with a WHY question that requires reasoning from the gap, not prior knowledge of the formula.
    Seed idea: "{seed_q}"
 
-Mention "{term.term}" only as "a method" or "a tool" — don't define it yet."""
+FORBIDDEN in intro: the formula, the computed result, any definition of "{term.term}"."""
 
     else:  # advanced
         style = f"""Structure (max 4 sentences):
-1. State the core design problem or constraint that motivated "{term.term}".
-2. Scenario: {term.scenario}
-3. A WHY question at the mechanism or trade-off level.
+1. State the design constraint or trade-off that motivated "{term.term}" — one sentence, mechanism-level.
+   NOT "we need X" — frame it as a design decision: "To train via gradient descent, the error signal must satisfy…"
+2. Scenario (full context is fine for advanced): {term.scenario}
+3. A WHY/HOW question at the design or trade-off level.
    Seed idea: "{seed_q}"
 
-Can name "{term.term}" directly — advanced students expect context-first, not suspense."""
+Advanced students can see the full scenario — focus on motivating the design choice, not hiding the answer."""
 
     return f"""{TEACHER_PERSONA}
 
 Opening lesson on "{term.term}".
 Learning goal: {term.learning_goal}
-Scenario to use throughout: {term.scenario}
+Full scenario (use problem setup now; save the solution for later phases): {term.scenario}
 
 {style}
 
