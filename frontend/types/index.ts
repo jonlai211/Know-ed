@@ -6,13 +6,19 @@ export interface SyllabusTerm {
   definition: string
   example: string
   exam_question: string
+  learning_goal: string
+  intro_text: string
   key_concepts: string[]
   misconceptions: string[]
+  scenario: string
+  questions: string[]
 }
 
 export interface SyllabusChapter {
   id: string
   title: string
+  hook: string
+  start_here_if: string
   terms: SyllabusTerm[]
 }
 
@@ -33,7 +39,7 @@ export interface ChatMessage {
 
 // ── Session ───────────────────────────────────────────────────────────────────
 
-export type Level = "beginner" | "intermediate" | "advanced"
+export type Level = "novice" | "intermediate" | "advanced"
 export type TermPhase = "intro" | "socratic" | "direct" | "teach_back"
 
 export interface Session {

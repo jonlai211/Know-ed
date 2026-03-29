@@ -4,6 +4,7 @@ Setup endpoints:
   POST /setup/upload  — initialize session from uploaded PDF/text (not in scope for demo)
 """
 import json
+import re
 import uuid
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
@@ -92,6 +93,25 @@ def _demo_script_to_syllabus(script: dict) -> dict:
     }
 
 
+@router.get("/sources/{topic}")
+async def get_sources(topic: str):
+    """Return fake source URLs for the generating-screen animation. No real scraping."""
+    slug = re.sub(r"[^a-z0-9]+", "-", topic.lower()).strip("-")
+    word = re.sub(r"[^a-z0-9]+", "_", topic.lower()).strip("_")
+    sources = [
+        {"type": "article", "url": f"en.wikipedia.org/wiki/{word}"},
+        {"type": "video",   "url": f"youtube.com/watch?v={slug}-explained"},
+        {"type": "course",  "url": f"khanacademy.org/search?referer={slug}"},
+        {"type": "paper",   "url": f"arxiv.org/search/?query={slug}"},
+        {"type": "article", "url": f"britannica.com/topic/{slug}"},
+        {"type": "video",   "url": f"youtube.com/watch?v={slug}-deep-dive"},
+        {"type": "course",  "url": f"coursera.org/search?query={topic}"},
+        {"type": "paper",   "url": f"semanticscholar.org/search?q={slug}"},
+        {"type": "article", "url": f"scholarpedia.org/article/{slug}"},
+    ]
+    return {"sources": sources}
+
+
 @router.post("/topic", response_model=SetupResponse)
 async def setup_from_topic(req: TopicRequest):
     if req.level not in LEVEL_SCORES:
@@ -105,7 +125,11 @@ async def setup_from_topic(req: TopicRequest):
     else:
         syllabus = _load_prebuilt_syllabus(req.topic)
         if not syllabus:
-            raise HTTPException(status_code=404, detail=f"No prebuilt syllabus for topic: {req.topic}")
+            from agents.syllabus_builder import build_syllabus
+            try:
+                syllabus = await build_syllabus(req.topic, req.level)
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Syllabus generation failed: {e}")
 
     session_id = str(uuid.uuid4())
     state = _initial_state(session_id, req.topic, req.level, syllabus, mode=req.mode, start_chapter_idx=req.start_chapter_idx)

@@ -12,6 +12,7 @@ class SyllabusTerm(BaseModel):
     example: str
     exam_question: str
     learning_goal: str = ""
+    intro_text: str = ""
     key_concepts: list[str] = []
     misconceptions: list[str] = []
     scenario: str = ""        # the single concrete example used throughout the lesson
@@ -21,6 +22,8 @@ class SyllabusTerm(BaseModel):
 class SyllabusChapter(BaseModel):
     id: str
     title: str
+    hook: str = ""
+    start_here_if: str = ""
     terms: list[SyllabusTerm]
 
 
