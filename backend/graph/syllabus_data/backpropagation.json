@@ -1,0 +1,149 @@
+{
+  "topic": "Backpropagation",
+  "topic_summary": "Backpropagation is the algorithm that makes neural networks learn by efficiently computing how each weight contributed to the prediction error.",
+  "chapters": [
+    {
+      "id": "ch1",
+      "title": "The Learning Problem",
+      "terms": [
+        {
+          "id": "loss_function",
+          "term": "Loss Function",
+          "definition": "A mathematical measure of how wrong the network's predictions are — the number we're trying to minimize.",
+          "example": "Mean Squared Error: if you predict 0.8 but the true answer is 1.0, the loss is (0.8 - 1.0)² = 0.04.",
+          "exam_question": "A loss function quantifies the _____ between the model's predictions and the true labels.",
+          "learning_goal": "Understand why we need a continuous, differentiable measure of error instead of simply counting wrong predictions — and what properties make a good loss function.",
+          "key_concepts": ["MSE", "cross-entropy", "differentiability", "continuous feedback"],
+          "misconceptions": ["Loss is just counting wrong predictions", "Loss of 0 means the model is perfect on new data"],
+          "scenario": "You predicted 0.8 but the true answer is 1.0. MSE loss = (0.8 - 1.0)² = 0.04.",
+          "questions": [
+            "You predicted 0.8 and the true answer is 1.0 — you're off by 0.2. If your prediction improved to 0.9 instead, would the MSE loss get bigger or smaller?",
+            "Imagine instead of MSE, we just mark a prediction as 'wrong' if it's off by more than 0.1. Your prediction improved from 0.8 to 0.0999 — still 'wrong'. Is that a useful signal for learning?",
+            "MSE gives 0.04 when you predict 0.8, and 0.01 when you predict 0.9. That smooth decrease tells you you're getting closer. What would you lose if loss could only be 0 or 1?",
+            "The loss is 0.04. That tells you *how wrong* you are. But does knowing the loss value alone tell you whether to increase or decrease your prediction to improve?"
+          ]
+        },
+        {
+          "id": "gradient",
+          "term": "Gradient",
+          "definition": "A vector that points in the direction of steepest increase of the loss — tells us which way to adjust each weight.",
+          "example": "If the gradient of weight w is +2.5, increasing w makes the loss go up; we should decrease w instead.",
+          "exam_question": "The gradient points in the direction of _____ increase of the loss function.",
+          "learning_goal": "Understand why the gradient (not just the loss value) is what tells us HOW to update weights, and why we move in the negative gradient direction.",
+          "key_concepts": ["partial derivative", "direction of steepest ascent", "negative gradient for descent"],
+          "misconceptions": ["Gradient points toward the minimum", "Zero gradient always means global minimum"],
+          "scenario": "Weight w has gradient +2.5. Increasing w by 0.1 raises the loss by about 0.25.",
+          "questions": [
+            "The gradient of w is +2.5. That means increasing w makes the loss go up. If you want to reduce the loss, should you increase or decrease w?",
+            "You decrease w by 0.1, and the loss drops from 0.04 to 0.015. You moved in the *opposite* direction of the gradient (+2.5) and the loss fell. Does moving against the gradient always reduce loss?",
+            "Now w1 has gradient +2.5 and w2 has gradient +0.1. Both point uphill, but by different amounts. If you can only adjust one weight, which one gives you more reduction in loss per unit of change?",
+            "The loss value is 0.04 — that tells you how wrong you are. The gradient is +2.5 — what does *that* tell you that the loss value alone doesn't?"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ch2",
+      "title": "The Math Behind Learning",
+      "terms": [
+        {
+          "id": "chain_rule",
+          "term": "Chain Rule",
+          "definition": "A calculus rule for differentiating composed functions — lets us compute how a change deep in the network affects the final loss.",
+          "example": "If loss = f(g(x)), then d(loss)/dx = f'(g(x)) · g'(x). In a 2-layer network, we multiply gradients layer by layer.",
+          "exam_question": "The chain rule allows us to compute derivatives through _____ functions.",
+          "learning_goal": "Understand why the chain rule is the mathematical key that makes it possible to assign blame to weights deep in the network — without it, we couldn't train deep networks at all.",
+          "key_concepts": ["composed functions", "derivative multiplication", "layer-by-layer gradient"],
+          "misconceptions": ["Chain rule only applies to two composed functions", "You can apply chain rule in any order"],
+          "scenario": "z = 2x, loss = z². With x=3: z=6, loss=36.",
+          "questions": [
+            "z = 2x, so if x increases by 1, z increases by 2. loss = z², so if z increases by 1, loss increases by 2z = 12. If x increases by 1, how much does loss change in total?",
+            "You computed: (how much z responds to x) × (how much loss responds to z) = how much loss responds to x. That's 2 × 12 = 24. Does the order of multiplication matter here?",
+            "In a 2-layer network, w1 → z1 → z2 → loss. To get d(loss)/dw1, you need to multiply derivatives across 3 links. If each link has derivative 0.5, what is d(loss)/dw1?",
+            "Without chain rule, to find how much w1 affects loss, you'd slightly change w1 and re-run the entire network to see what happens — separately for every single weight. A network has 10 million weights. Why is that impractical?"
+          ]
+        },
+        {
+          "id": "forward_pass",
+          "term": "Forward Pass",
+          "definition": "The left-to-right computation through the network that produces a prediction from an input.",
+          "example": "Input → [Layer 1: multiply weights, add bias, apply ReLU] → [Layer 2: same] → Output prediction.",
+          "exam_question": "During the forward pass, the network computes a _____ by passing input through each layer in sequence.",
+          "learning_goal": "Understand that the forward pass not only produces a prediction but stores all intermediate values that backpropagation will need to compute gradients.",
+          "key_concepts": ["prediction", "layer activations", "stored intermediate values"],
+          "misconceptions": ["Forward pass includes weight updates", "Each layer is independent during forward pass"],
+          "scenario": "x=0.5, w1=2, w2=3. Forward pass: z1 = 0.5×2 = 1.0, a1 = relu(1.0) = 1.0, z2 = 1.0×3 = 3.0.",
+          "questions": [
+            "Trace through the example: input 0.5 multiplied by w1=2 gives z1=1.0, relu(1.0) stays 1.0, then multiplied by w2=3 gives output 3.0. Which layer produced the intermediate value a1=1.0?",
+            "During backprop, to compute the gradient of w2, you need to know what value *fed into* w2 — that's a1=1.0. Is that value still available after the forward pass finishes?",
+            "If we discarded a1=1.0 right after computing the output 3.0, what would backprop have to do to get a1 back when it needs it?",
+            "The forward pass stores every intermediate activation. For a 100-layer network, that means 100 stored values. Why is holding onto all these intermediate values worth the memory cost?"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ch3",
+      "title": "Backpropagation",
+      "terms": [
+        {
+          "id": "computational_graph",
+          "term": "Computational Graph",
+          "definition": "A directed graph representing every operation in the network — backprop traverses this graph in reverse.",
+          "example": "z = w·x + b → a = relu(z) → loss = (a - y)². Each arrow is an operation; backprop flows backward along arrows.",
+          "exam_question": "A computational graph represents the _____ of operations performed during the forward pass.",
+          "learning_goal": "Understand why representing the network as a graph makes it possible to systematically apply the chain rule in reverse — it turns an abstract math problem into a concrete traversal algorithm.",
+          "key_concepts": ["nodes as operations", "edges as data flow", "reverse traversal"],
+          "misconceptions": ["The computational graph is fixed regardless of input", "Backprop modifies the graph"],
+          "scenario": "w=2, x=0.5, b=0, y=2. Forward: z = 2×0.5+0 = 1, a = relu(1) = 1, loss = (1−2)² = 1.",
+          "questions": [
+            "The graph has 3 steps: compute z, compute a=relu(z), compute loss=(a-y)². If you walk backward from loss, which step do you hit first — the one that computed a, or the one that computed z?",
+            "d(loss)/da = 2(a−y) = 2(1−2) = −2. da/dz = relu'(1) = 1. dz/dw = x = 0.5. Multiplying backward through the graph: what is d(loss)/dw?",
+            "You just followed 3 arrows backward, multiplying a derivative at each one. If the graph had 10 nodes instead of 3, would you do anything structurally different?",
+            "Without the graph, every new network architecture would need its own hand-derived gradient formula. With the graph, you always just follow the same backward-traversal rule. Why does this matter for building deep learning frameworks like PyTorch?"
+          ]
+        },
+        {
+          "id": "backpropagation",
+          "term": "Backpropagation",
+          "definition": "Efficient reverse-mode automatic differentiation — computes gradients for all weights in one backward pass using the chain rule.",
+          "example": "After a forward pass, backprop starts at the loss, computes ∂loss/∂w for each weight layer by layer going backward.",
+          "exam_question": "Backpropagation computes gradients by traversing the computational graph in _____ order.",
+          "learning_goal": "Understand why backpropagation is efficient — it reuses intermediate computations instead of computing each weight's gradient from scratch, making it feasible to train networks with millions of parameters.",
+          "key_concepts": ["reverse-mode autodiff", "gradient accumulation", "one backward pass for all weights"],
+          "misconceptions": ["Backprop IS gradient descent", "Backprop updates weights directly", "Backprop computes each weight's gradient independently"],
+          "scenario": "A 2-layer network with weights w1, b1 (layer 1) and w2, b2 (layer 2) — 4 weights total.",
+          "questions": [
+            "The naive way: slightly change w1, run the full network, measure loss change. Then do the same for w2, b1, b2. For 4 weights, how many full forward passes does this require?",
+            "In backprop's backward pass, you compute d(loss)/d(a2) once. Then both d(loss)/dw2 and d(loss)/db2 need that same value. How many times is d(loss)/d(a2) computed?",
+            "Going back to layer 1: d(loss)/d(a1) is computed once, then reused by both dw1 and db1. For a layer with 1000 weights, how many times do you compute the upstream gradient coming into that layer?",
+            "Naive approach: 4 forward passes for 4 weights. Backprop: 1 forward + 1 backward pass total. For a network with 10 million weights, how does this change what's computationally feasible?"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ch4",
+      "title": "Challenges in Deep Networks",
+      "terms": [
+        {
+          "id": "vanishing_gradient",
+          "term": "Vanishing Gradient",
+          "definition": "The problem where gradients shrink exponentially as they flow backward through many layers, making early layers learn very slowly.",
+          "example": "With sigmoid activations, each layer multiplies the gradient by a value between 0 and 0.25. After 10 layers: 0.25¹⁰ ≈ 0.000001.",
+          "exam_question": "Vanishing gradient causes early layers to learn _____ because gradients shrink as they propagate backward.",
+          "learning_goal": "Understand why vanishing gradient is a fundamental consequence of using the chain rule with saturating activations, and how architectural choices (ReLU, residual connections) were designed specifically to combat it.",
+          "key_concepts": ["sigmoid saturation", "gradient multiplication", "ReLU as solution", "residual connections"],
+          "misconceptions": ["Vanishing gradient only happens with sigmoid", "Batch normalization completely solves it", "Deeper networks always have vanishing gradients"],
+          "scenario": "A 10-layer sigmoid network. Sigmoid's max derivative is 0.25, so each backward step multiplies the gradient by at most 0.25.",
+          "questions": [
+            "Sigmoid's max derivative is 0.25. Backprop multiplies gradients layer by layer. Starting with gradient=1 at the output, what is the gradient after passing back through 3 sigmoid layers? (0.25³ = ?)",
+            "After 10 layers the gradient is 0.25¹⁰ ≈ 0.000001. With a learning rate of 0.01, the weight update for layer 1 is 0.01 × 0.000001 = 0.00000001. Is layer 1 learning anything meaningful?",
+            "ReLU's derivative is 1 for positive inputs. After backpropagating through 10 ReLU layers with derivative 1, the gradient is 1¹⁰ = 1. Compare this to sigmoid's 0.000001 — which lets layer 1 actually learn?",
+            "A residual connection adds a direct shortcut that carries the gradient straight from the output back to an early layer, skipping the intermediate multiplications. How does this prevent the gradient from vanishing?"
+          ]
+        }
+      ]
+    }
+  ]
+}

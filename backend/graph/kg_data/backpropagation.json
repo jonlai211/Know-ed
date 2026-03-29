@@ -1,0 +1,98 @@
+{
+  "topic_summary": "Backpropagation is the algorithm that makes neural networks learn by efficiently computing how each weight contributed to the error.",
+  "entry_node_id": "loss_function",
+  "nodes": {
+    "loss_function": {
+      "id": "loss_function",
+      "label": "Loss Function",
+      "description": "A measure of how wrong the network's prediction is — the problem that motivates everything.",
+      "status": "active",
+      "prerequisites": [],
+      "common_misconceptions": [
+        "The loss function IS the learning — minimizing it is the same as backprop",
+        "Any differentiable function can be a loss function without consequences",
+        "Loss of 0 means the model is perfect"
+      ]
+    },
+    "gradient": {
+      "id": "gradient",
+      "label": "Gradient",
+      "description": "The direction and magnitude of steepest increase of the loss — tells us how to adjust weights.",
+      "status": "available",
+      "prerequisites": [],
+      "common_misconceptions": [
+        "The gradient points toward the minimum (it actually points toward the maximum)",
+        "Gradient is just a derivative — same thing for scalar functions",
+        "A zero gradient always means we found the global minimum"
+      ]
+    },
+    "chain_rule": {
+      "id": "chain_rule",
+      "label": "Chain Rule",
+      "description": "The calculus rule that lets us compute derivatives through composed functions — the mathematical heart of backprop.",
+      "status": "locked",
+      "prerequisites": ["gradient"],
+      "common_misconceptions": [
+        "Chain rule only applies to two composed functions, not deeper chains",
+        "You can apply chain rule in any order",
+        "Chain rule and product rule are the same thing"
+      ]
+    },
+    "forward_pass": {
+      "id": "forward_pass",
+      "label": "Forward Pass",
+      "description": "The left-to-right computation through the network that produces a prediction.",
+      "status": "locked",
+      "prerequisites": ["loss_function"],
+      "common_misconceptions": [
+        "Forward pass includes weight updates",
+        "Each layer is independent during the forward pass",
+        "The forward pass computes gradients"
+      ]
+    },
+    "computational_graph": {
+      "id": "computational_graph",
+      "label": "Computational Graph",
+      "description": "A directed graph representing the sequence of operations — the structure backprop traverses in reverse.",
+      "status": "locked",
+      "prerequisites": ["forward_pass", "chain_rule"],
+      "common_misconceptions": [
+        "The computational graph is fixed — it doesn't change with different inputs",
+        "Backprop modifies the computational graph",
+        "Each node in the graph is a neuron"
+      ]
+    },
+    "backpropagation": {
+      "id": "backpropagation",
+      "label": "Backpropagation",
+      "description": "Efficient reverse-mode automatic differentiation through the computational graph using the chain rule.",
+      "status": "locked",
+      "prerequisites": ["computational_graph"],
+      "common_misconceptions": [
+        "Backprop IS gradient descent — they are the same algorithm",
+        "Backprop updates the weights directly",
+        "Backprop just computes derivatives of each weight independently"
+      ]
+    },
+    "vanishing_gradient": {
+      "id": "vanishing_gradient",
+      "label": "Vanishing Gradient",
+      "description": "The problem where gradients shrink exponentially in deep networks, making early layers learn very slowly.",
+      "status": "locked",
+      "prerequisites": ["backpropagation"],
+      "common_misconceptions": [
+        "Vanishing gradient only happens with sigmoid activations",
+        "Deeper networks always have vanishing gradients",
+        "Batch normalization completely solves vanishing gradients"
+      ]
+    }
+  },
+  "edges": [
+    ["loss_function", "forward_pass"],
+    ["gradient", "chain_rule"],
+    ["forward_pass", "computational_graph"],
+    ["chain_rule", "computational_graph"],
+    ["computational_graph", "backpropagation"],
+    ["backpropagation", "vanishing_gradient"]
+  ]
+}

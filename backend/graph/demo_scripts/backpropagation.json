@@ -1,0 +1,861 @@
+{
+  "topic": "Backpropagation",
+  "topic_summary": "Backpropagation is the algorithm that makes neural networks learn by computing how each weight contributed to the prediction error and updating them accordingly.",
+  "chapters": [
+    {
+      "id": "CH_1",
+      "title": "Learning Objective & Signal",
+      "hook": "What exactly is the network trying to do, and how do we measure success?",
+      "start_here_if": "You want to understand the big picture before any math",
+      "terms": [
+        {
+          "id": "Model_Output",
+          "term": "Model Output",
+          "intro": "Imagine a neural network sees an image of a handwritten digit. Before we judge whether it is right or wrong, the model must first produce something. What is that thing called?",
+          "turns": [
+          {
+            "keywords": ["output", "prediction", "predicted value", "predicted result", "score", "logit", "probability", "预测", "预测结果", "输出"],
+            "on_correct": "Exactly. The model first produces an output, often interpreted as a prediction, score, or probability. Now think one step further: is the model output always the same thing as the correct answer?",
+            "on_partial": "You are close. I am looking for the thing the model produces immediately after the forward pass, before we compare it with the true answer. What do we usually call that?",
+            "on_stuck": "Think of a student answering a question on a test. Before checking whether the answer is correct, the student first writes something down. The model does the same. What is that produced value called?",
+            "score_correct": 5,
+            "score_partial": 2
+          },
+          {
+            "keywords": ["no", "not always", "different from target", "different from label", "prediction is not ground truth", "不是", "不一定", "和真实标签不同", "和target不同", "和label不同"],
+            "on_correct": "Right. The model output is the model's own produced result, while the target is the correct answer we want it to match. So here is the key question: why do we care about the model output in learning?",
+            "on_partial": "Partly right. I want you to separate two ideas: the model output is what the model says, while the target or label is what reality says. Can they differ?",
+            "on_stuck": "Try comparing these two roles: one is 'what the model predicts', the other is 'the correct answer in the dataset'. Are they the same object?",
+            "score_correct": 5,
+            "score_partial": 2
+          },
+          {
+            "keywords": ["to compare with target", "to compute loss", "loss", "error", "measure mistake", "for backprop", "for gradient", "比较target", "计算loss", "计算误差", "反向传播", "梯度"],
+            "on_correct": "Exactly. We care about the model output because it is what gets compared with the target to compute the loss, and that loss drives backpropagation. So the model output is the starting point for measuring error.",
+            "on_partial": "Good direction. The output matters because we do not train directly from the input alone. We train by checking how the produced output differs from the correct answer. What quantity do we compute from that difference?",
+            "on_stuck": "Here is a hint: output by itself is not enough. We compare output with target, then compute a number that tells us how wrong the model is. What is that number called?",
+            "score_correct": 5,
+            "score_partial": 2
+          }
+          ],
+          "teach_back_prompt": "Now explain 'Model Output' in your own words as if you were teaching a beginner. Try to include: (1) what it is, (2) how it differs from the target, and (3) why it matters for learning.",
+          "teach_back_keywords": [
+            "model produces",
+            "prediction",
+            "output",
+            "before comparison",
+            "different from target",
+            "different from label",
+            "used to compute loss",
+            "measures error",
+            "drives backpropagation",
+            "模型产生",
+            "预测",
+            "输出",
+            "和target不同",
+            "和label不同",
+            "计算loss",
+            "衡量误差",
+            "驱动反向传播"
+          ],
+          "teach_back_pass": "That is a solid explanation. You captured the three essential ideas: the model output is what the model produces, it is not automatically the same as the target, and it is used to compute the loss that drives learning.",
+          "teach_back_fail": "Nice try. Your explanation is missing one of the core pieces. A strong answer should say that model output is the model's produced prediction, that it can differ from the target, and that this difference is used to compute the loss for backpropagation.",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Target_Label",
+          "term": "Target Label",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Prediction_Error",
+          "term": "Prediction Error",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Loss_Function",
+          "term": "Loss Function",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Optimization_Objective",
+          "term": "Optimization Objective",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Gradient",
+          "term": "Gradient",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        }
+      ]
+    },
+    {
+      "id": "CH_2",
+      "title": "Differentiation Structure",
+      "hook": "The mathematical skeleton of learning — how we track which operation caused the error.",
+      "start_here_if": "You want to understand why the chain rule is the heart of backprop",
+      "terms": [
+        {
+          "id": "Computational_Graph",
+          "term": "Computational Graph",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Node",
+          "term": "Node",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Edge",
+          "term": "Edge",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Local_Derivative",
+          "term": "Local Derivative",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Partial_Derivative",
+          "term": "Partial Derivative",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Chain_Rule",
+          "term": "Chain Rule",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Gradient_Composition",
+          "term": "Gradient Composition",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        }
+      ]
+    },
+    {
+      "id": "CH_3",
+      "title": "Backpropagation Mechanics",
+      "hook": "Step by step: how gradients actually travel backward through the network.",
+      "start_here_if": "You want to understand backprop's core algorithm end-to-end",
+      "terms": [
+        {
+          "id": "Forward_Pass",
+          "term": "Forward Pass",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Intermediate_Activation",
+          "term": "Intermediate Activation",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Cached_Values",
+          "term": "Cached Values",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Backward_Pass",
+          "term": "Backward Pass",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Upstream_Gradient",
+          "term": "Upstream Gradient",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Gradient_Flow",
+          "term": "Gradient Flow",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Parameter_Gradient",
+          "term": "Parameter Gradient",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        }
+      ]
+    },
+    {
+      "id": "CH_4",
+      "title": "Parameterization",
+      "hook": "Weights and biases — the numbers we tune to make the network smarter.",
+      "start_here_if": "You're unsure what weights and biases actually do during training",
+      "terms": [
+        {
+          "id": "Weight",
+          "term": "Weight",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Bias",
+          "term": "Bias",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Linear_Transformation",
+          "term": "Linear Transformation",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Affine_Transformation",
+          "term": "Affine Transformation",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Parameter_Update",
+          "term": "Parameter Update",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        }
+      ]
+    },
+    {
+      "id": "CH_5",
+      "title": "Activation Dynamics",
+      "hook": "Why ReLU replaced sigmoid — nonlinearities that decide what deep networks can learn.",
+      "start_here_if": "You want to understand activation functions and their gradient impact",
+      "terms": [
+        {
+          "id": "Activation_Function",
+          "term": "Activation Function",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Sigmoid_Function",
+          "term": "Sigmoid Function",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "ReLU_Function",
+          "term": "ReLU Function",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Tanh_Function",
+          "term": "Tanh Function",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Softmax_Function",
+          "term": "Softmax Function",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Activation_Derivative",
+          "term": "Activation Derivative",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        }
+      ]
+    },
+    {
+      "id": "CH_6",
+      "title": "Loss Landscape",
+      "hook": "MSE, cross-entropy, log-likelihood — choosing the right way to measure being wrong.",
+      "start_here_if": "You want to understand different loss functions and when to use each",
+      "terms": [
+        {
+          "id": "Mean_Squared_Error",
+          "term": "Mean Squared Error",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Cross_Entropy_Loss",
+          "term": "Cross Entropy Loss",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Log_Likelihood",
+          "term": "Log Likelihood",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Loss_Gradient",
+          "term": "Loss Gradient",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Gradient_Stability",
+          "term": "Gradient Stability",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        }
+      ]
+    },
+    {
+      "id": "CH_7",
+      "title": "Optimization Process",
+      "hook": "Gradient descent, learning rates, mini-batches — how the network actually gets better over time.",
+      "start_here_if": "You want to understand the training loop and how to tune it",
+      "terms": [
+        {
+          "id": "Gradient_Descent",
+          "term": "Gradient Descent",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Stochastic_Gradient_Descent",
+          "term": "Stochastic Gradient Descent",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Mini_Batch_Training",
+          "term": "Mini-Batch Training",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Learning_Rate",
+          "term": "Learning Rate",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Convergence",
+          "term": "Convergence",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Update_Dynamics",
+          "term": "Update Dynamics",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        }
+      ]
+    },
+    {
+      "id": "CH_8",
+      "title": "Gradient Pathologies",
+      "hook": "Vanishing and exploding gradients — the reasons deep networks are notoriously hard to train.",
+      "start_here_if": "Your model isn't learning, or you're building a very deep network",
+      "terms": [
+        {
+          "id": "Vanishing_Gradient",
+          "term": "Vanishing Gradient",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Exploding_Gradient",
+          "term": "Exploding Gradient",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Gradient_Scaling",
+          "term": "Gradient Scaling",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Initialization_Strategy",
+          "term": "Initialization Strategy",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Numerical_Stability",
+          "term": "Numerical Stability",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        }
+      ]
+    },
+    {
+      "id": "CH_9",
+      "title": "Systems & Implementation",
+      "hook": "How PyTorch and JAX compute gradients automatically — the engineering behind autodiff.",
+      "start_here_if": "You want to understand what deep learning frameworks do under the hood",
+      "terms": [
+        {
+          "id": "Vectorized_Computation",
+          "term": "Vectorized Computation",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Matrix_Backpropagation",
+          "term": "Matrix Backpropagation",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Automatic_Differentiation",
+          "term": "Automatic Differentiation",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Reverse_Mode_AD",
+          "term": "Reverse Mode AD",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Computation_Graph_Traversal",
+          "term": "Computation Graph Traversal",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        },
+        {
+          "id": "Memory_Computation_Tradeoff",
+          "term": "Memory-Computation Tradeoff",
+          "intro": "TODO",
+          "turns": [
+            { "keywords": [], "on_correct": "TODO", "on_partial": "TODO", "on_stuck": "TODO", "score_correct": 5, "score_partial": 2 }
+          ],
+          "teach_back_prompt": "TODO",
+          "teach_back_keywords": [],
+          "teach_back_pass": "TODO",
+          "teach_back_fail": "TODO",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="280" height="180" viewBox="0 0 280 180">
+  <rect width="280" height="180" rx="12" fill="#f0f8f7" stroke="#006a6a" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <text x="140" y="75" font-family="serif" font-size="13" fill="#006a6a" text-anchor="middle" opacity="0.7">[student regiochemistry]</text>
+  <text x="140" y="98" font-family="sans-serif" font-size="10" fill="#006a6a" text-anchor="middle" opacity="0.45">Replace with actual chemistry image</text>
+  <text x="140" y="118" font-family="monospace" font-size="9" fill="#006a6a" text-anchor="middle" opacity="0.35">/public/demo/student-regiochemistry.png</text>
+</svg>

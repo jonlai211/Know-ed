@@ -1,0 +1,46 @@
+{
+  "_comment": "Demo script template. Copy this file, rename it to your topic (e.g. backpropagation.json), and fill in the content.",
+  "topic": "Your Topic Name",
+  "topic_summary": "One sentence describing the topic.",
+  "chapters": [
+    {
+      "id": "ch1",
+      "title": "Chapter Title",
+      "terms": [
+        {
+          "id": "term_id",
+          "term": "Term Name",
+
+          "intro": "The opening message shown to the student. Set up the scenario, introduce the term, and end with the first question.",
+
+          "turns": [
+            {
+              "_comment": "One turn = one question. The 'intro' already asked question 0, so turns[0] handles the student's first reply.",
+              "keywords": ["keyword1", "keyword2"],
+              "on_correct": "Acknowledgment of correct answer + transition to next question (or to teach-back if this is the last turn).",
+              "on_partial": "Acknowledge what's right, point out the gap, re-ask or nudge forward.",
+              "on_stuck": "Give a concrete hint using numbers from the scenario, then re-ask the same question more simply.",
+              "score_correct": 5,
+              "score_partial": 2
+            },
+            {
+              "keywords": ["keyword3"],
+              "on_correct": "...",
+              "on_partial": "...",
+              "on_stuck": "...",
+              "score_correct": 5,
+              "score_partial": 2
+            }
+          ],
+
+          "teach_back_prompt": "Now explain [term] to me in your own words, as if I've never heard of it.",
+          "teach_back_keywords": ["key concept word", "another key word"],
+          "teach_back_pass": "Great explanation! You've got it. [Brief reinforcement of the core idea.]",
+          "teach_back_fail": "Not quite. [Correct 1-2 sentence explanation of the core idea.] Let's move on.",
+          "score_teach_back_pass": 15,
+          "score_teach_back_fail": 0
+        }
+      ]
+    }
+  ]
+}
