@@ -88,7 +88,7 @@ Schema:
   ]
 }
 
-Rules: exactly 2 chapters, 2-3 terms each. Output JSON only."""
+Rules: exactly 2 chapters, 3-4 terms each. Output JSON only."""
 
 
 # ── Step 2: enrich one term ────────────────────────────────────────────────────

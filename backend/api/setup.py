@@ -36,6 +36,7 @@ class SetupResponse(BaseModel):
     syllabus: dict
     topic_summary: str
     initial_score: int
+    kg_data: dict = {}
 
 
 def _load_prebuilt_syllabus(topic: str) -> dict | None:
@@ -138,11 +139,22 @@ async def setup_from_topic(req: TopicRequest):
     state = _initial_state(session_id, req.topic, req.level, syllabus, mode=req.mode, start_chapter_idx=req.start_chapter_idx)
     save_session(session_id, state)
 
+    # Build visual KG (only for AI mode with real syllabi)
+    kg_data: dict = {}
+    if req.mode == "ai":
+        try:
+            from agents.kg_builder import build_visual_kg
+            kg_data = await build_visual_kg(req.topic, syllabus)
+        except Exception:
+            import traceback, logging
+            logging.getLogger(__name__).warning("KG generation failed:\n%s", traceback.format_exc())
+
     return SetupResponse(
         session_id=session_id,
         syllabus=syllabus,
         topic_summary=syllabus.get("topic_summary", ""),
         initial_score=LEVEL_SCORES[req.level],
+        kg_data=kg_data,
     )
 
 

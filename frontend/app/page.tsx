@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { Syllabus } from "@/types"
+import { Syllabus, KgData } from "@/types"
 import { useSSE, SSEEvent } from "@/hooks/useSSE"
+import { DynamicKnowledgeGraph } from "@/components/DynamicKnowledgeGraph"
 
 const API = "http://localhost:8000"
 
@@ -82,7 +83,7 @@ function GeneratingScreen({
 }: {
   topic: string
   level: Level
-  onDone: (sessionId: string, syllabus: Syllabus, initialScore: number) => void
+  onDone: (sessionId: string, syllabus: Syllabus, initialScore: number, kgData: KgData) => void
 }) {
   type Stage = "searching" | "analyzing" | "building" | "done"
   const [stage, setStage] = useState<Stage>("searching")
@@ -92,7 +93,9 @@ function GeneratingScreen({
   const [initialScore, setInitialScore] = useState(0)
   const [visibleChapters, setVisibleChapters] = useState(0)
   const [visibleTerms, setVisibleTerms] = useState<number[]>([])
-  const apiDoneRef = useRef(false)
+  const [apiError, setApiError] = useState("")
+  const [elapsed, setElapsed] = useState(0)
+  const syllabusRef = useRef<Syllabus | null>(null)
   const sources = makeSources(topic)
 
   // Fire API call immediately
@@ -102,14 +105,18 @@ function GeneratingScreen({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ topic, level, mode: "ai" }),
     })
-      .then(r => r.json())
-      .then(data => {
-        setSessionId(data.session_id)
-        setSyllabusData(data.syllabus)
-        setInitialScore(data.initial_score)
-        apiDoneRef.current = true
+      .then(r => {
+        if (!r.ok) throw new Error(`Server error ${r.status}`)
+        return r.json()
       })
-      .catch(() => { apiDoneRef.current = true })
+      .then(data => {
+        if (!data.syllabus) throw new Error("No syllabus in response")
+        setSessionId(data.session_id)
+        setInitialScore(data.initial_score)
+        setSyllabusData({ ...data.syllabus, _kgData: data.kg_data ?? {} })
+        syllabusRef.current = { ...data.syllabus, _kgData: data.kg_data ?? {} }
+      })
+      .catch(e => setApiError(e.message || "Generation failed"))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Animate sources
@@ -125,17 +132,24 @@ function GeneratingScreen({
     return () => clearInterval(id)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Elapsed timer while analyzing (so user knows it's still working)
+  useEffect(() => {
+    if (stage !== "analyzing") return
+    const id = setInterval(() => setElapsed(s => s + 1), 1000)
+    return () => clearInterval(id)
+  }, [stage])
+
   // Poll for API completion while analyzing
   useEffect(() => {
     if (stage !== "analyzing") return
     const id = setInterval(() => {
-      if (apiDoneRef.current && syllabusData) {
+      if (syllabusRef.current) {
         clearInterval(id)
         setStage("building")
       }
-    }, 200)
+    }, 300)
     return () => clearInterval(id)
-  }, [stage, syllabusData])
+  }, [stage])
 
   // Animate syllabus chapters+terms after building starts
   useEffect(() => {
@@ -165,7 +179,10 @@ function GeneratingScreen({
   }, [stage, syllabusData])
 
   const handleStart = () => {
-    if (syllabusData && sessionId) onDone(sessionId, syllabusData, initialScore)
+    if (syllabusData && sessionId) {
+      const { _kgData, ...syllabus } = syllabusData as Syllabus & { _kgData?: KgData }
+      onDone(sessionId, syllabus as Syllabus, initialScore, (_kgData ?? {}) as KgData)
+    }
   }
 
   return (
@@ -178,7 +195,7 @@ function GeneratingScreen({
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium mb-4"
             style={{ background: "rgba(0,106,106,0.08)", color: "#006a6a", border: "1px solid rgba(0,106,106,0.15)" }}>
             <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#006a6a" }} />
-            {stage === "done" ? "Syllabus ready" : stage === "analyzing" ? "Analyzing content" : stage === "building" ? "Generating syllabus" : "Researching"}
+            {stage === "done" ? "Syllabus ready" : stage === "analyzing" ? "Generating with AI" : stage === "building" ? "Building syllabus" : "Researching"}
           </div>
           <h2 className="text-[28px] font-bold text-on-surface leading-tight"
             style={{ fontFamily: "var(--font-newsreader, serif)" }}>
@@ -187,6 +204,16 @@ function GeneratingScreen({
           {stage === "searching" && (
             <p className="text-sm text-on-surface-variant mt-2">
               Finding the best resources on <span className="font-medium text-on-surface">{topic}</span>
+            </p>
+          )}
+          {stage === "analyzing" && !apiError && (
+            <p className="text-sm text-on-surface-variant mt-2">
+              Building your personalized curriculum… <span className="tabular-nums">{elapsed}s</span>
+            </p>
+          )}
+          {apiError && (
+            <p className="text-sm mt-2" style={{ color: "#c0392b" }}>
+              {apiError} — <button className="underline" onClick={() => window.location.reload()}>retry</button>
             </p>
           )}
         </div>
@@ -294,12 +321,13 @@ interface Msg {
 }
 
 function RealLearningScreen({
-  sessionId, syllabus, initialScore, topic, onExit,
+  sessionId, syllabus, initialScore, topic, kgData, onExit,
 }: {
   sessionId: string
   syllabus: Syllabus
   initialScore: number
   topic: string
+  kgData: KgData
   onExit: () => void
 }) {
   const chapters = syllabus.chapters
@@ -597,8 +625,14 @@ function RealLearningScreen({
           <div className="px-5 py-3 border-b border-outline-variant/15 flex-shrink-0">
             <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Knowledge Graph</span>
           </div>
-          <div className="flex-1 flex items-center justify-center text-on-surface-variant/40 text-sm">
-            Coming soon
+          <div className="flex-1 overflow-hidden">
+            {kgData.nodes?.length > 0 ? (
+              <DynamicKnowledgeGraph kgData={kgData} activeTermKey={activeTermKey} />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-on-surface-variant/40 text-sm">
+                No graph data
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -627,16 +661,18 @@ export default function Home() {
   const [sessionId, setSessionId]         = useState("")
   const [syllabus, setSyllabus]           = useState<Syllabus | null>(null)
   const [initialScore, setInitialScore]   = useState(0)
+  const [kgData, setKgData]               = useState<KgData>({ nodes: [], edges: [], term_nodes: {} })
 
   const topic = topicInput.trim() || "Backpropagation"
 
-  const handleGenerateDone = (sid: string, syl: Syllabus, score: number) => {
-    setSessionId(sid); setSyllabus(syl); setInitialScore(score)
+  const handleGenerateDone = (sid: string, syl: Syllabus, score: number, kg: KgData) => {
+    setSessionId(sid); setSyllabus(syl); setInitialScore(score); setKgData(kg)
     setScreen("learning")
   }
 
   const handleExit = () => {
     setSessionId(""); setSyllabus(null); setInitialScore(0)
+    setKgData({ nodes: [], edges: [], term_nodes: {} })
     setScreen("landing")
   }
 
@@ -760,6 +796,7 @@ export default function Home() {
         syllabus={syllabus}
         initialScore={initialScore}
         topic={topic}
+        kgData={kgData}
         onExit={handleExit}
       />
     )

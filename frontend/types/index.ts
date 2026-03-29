@@ -53,6 +53,30 @@ export interface Session {
   current_term_idx: number
 }
 
+// ── Knowledge Graph ───────────────────────────────────────────────────────────
+
+export interface KgNode {
+  id: string
+  display: string
+  fullLabel: string
+  chapter: string
+  col: number  // 1-3
+  row: number  // 1-6
+}
+
+export interface KgEdge {
+  id: string
+  from: string
+  to: string
+  label: string
+}
+
+export interface KgData {
+  nodes: KgNode[]
+  edges: KgEdge[]
+  term_nodes: Record<string, string[]>  // "chIdx-tIdx" → node ids
+}
+
 // ── SSE events ────────────────────────────────────────────────────────────────
 
 export interface ScoreUpdate {
