@@ -25,20 +25,36 @@ class ChatRequest(BaseModel):
     session_id: str
     message: str
     i_understand: bool = False  # student clicked "I understand" button
+    image_b64: str | None = None   # base64-encoded image (optional)
+    image_mime: str = "image/jpeg"
 
 
 async def _sse(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(data)}\n\n"
 
 
-async def stream_response(session_id: str, user_message: str, i_understand: bool):
+async def stream_response(session_id: str, user_message: str, i_understand: bool,
+                          image_b64: str | None = None, image_mime: str = "image/jpeg"):
     state = load_session(session_id)
     if state is None:
         yield await _sse("error", {"message": "Session not found"})
         return
 
     try:
-        state_delta, output = await process_message(state, user_message, i_understand)
+        # If image attached, analyze it and prepend description to the message
+        effective_message = user_message
+        if image_b64:
+            try:
+                import base64
+                from agents.vision import describe_for_chat
+                image_bytes = base64.b64decode(image_b64)
+                description = await describe_for_chat(image_bytes, image_mime)
+                prefix = f"[Student shared an image: {description}]"
+                effective_message = f"{prefix}\n\n{user_message}".strip() if user_message.strip() else prefix
+            except Exception:
+                pass  # silently fall back to text-only message
+
+        state_delta, output = await process_message(state, effective_message, i_understand)
 
         # Merge updated state
         updated_state = {**state, **state_delta}
@@ -83,7 +99,7 @@ async def stream_response(session_id: str, user_message: str, i_understand: bool
 @router.post("/chat")
 async def chat(req: ChatRequest):
     return StreamingResponse(
-        stream_response(req.session_id, req.message, req.i_understand),
+        stream_response(req.session_id, req.message, req.i_understand, req.image_b64, req.image_mime),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )

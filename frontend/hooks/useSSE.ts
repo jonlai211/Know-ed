@@ -17,16 +17,34 @@ export function useSSE({ onEvent, onError }: SSEHandlers) {
   const abortRef = useRef<AbortController | null>(null)
 
   const send = useCallback(
-    async (sessionId: string, message: string, iUnderstand = false) => {
+    async (sessionId: string, message: string, iUnderstand = false, imageFile?: File | null) => {
       abortRef.current?.abort()
       const controller = new AbortController()
       abortRef.current = controller
 
       try {
+        // Base64-encode image if present
+        let imageB64: string | undefined
+        let imageMime: string | undefined
+        if (imageFile) {
+          imageMime = imageFile.type || "image/jpeg"
+          imageB64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = () => resolve((reader.result as string).split(",")[1])
+            reader.onerror = reject
+            reader.readAsDataURL(imageFile)
+          })
+        }
+
         const res = await fetch("http://localhost:8000/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ session_id: sessionId, message, i_understand: iUnderstand }),
+          body: JSON.stringify({
+            session_id: sessionId,
+            message,
+            i_understand: iUnderstand,
+            ...(imageB64 ? { image_b64: imageB64, image_mime: imageMime } : {}),
+          }),
           signal: controller.signal,
         })
 
