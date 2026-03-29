@@ -5,6 +5,7 @@ from typing import Type, TypeVar
 from pydantic import BaseModel
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import BaseMessage
+from agents.providers import make_llm
 
 logger = logging.getLogger(__name__)
 
@@ -12,14 +13,7 @@ T = TypeVar("T", bound=BaseModel)
 
 # ── LLM 实例 ──────────────────────────────────────────────────────────────────
 
-llm = ChatOpenAI(
-    model="deepseek-v3",
-    openai_api_key="EMPTY",
-    openai_api_base="http://118.25.85.143:6400/v1",
-    temperature=0.0,
-    max_tokens=2048,
-    model_kwargs={"extra_body": {"chat_template_kwargs": {"thinking": True}}},
-)
+llm = make_llm(max_tokens=2048)
 
 JSON_REMINDER = "\n\n[Reminder: reply ONLY with a valid JSON object, no other text.]"
 

@@ -6,16 +6,10 @@ import re
 import json
 import asyncio
 from langchain_core.messages import SystemMessage, HumanMessage
-from langchain_openai import ChatOpenAI
+from agents.providers import make_llm
 
 # Separate LLM instance with higher token limit for syllabus generation
-_llm = ChatOpenAI(
-    model="deepseek-v3",
-    openai_api_key="EMPTY",
-    openai_api_base="http://118.25.85.143:6400/v1",
-    temperature=0.0,
-    max_tokens=4096,
-)
+_llm = make_llm(max_tokens=4096)
 
 
 def _extract_json(text: str) -> str:

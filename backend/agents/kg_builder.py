@@ -8,8 +8,8 @@ import json
 import re
 import asyncio
 from langchain_core.messages import SystemMessage, HumanMessage
-from langchain_openai import ChatOpenAI
 from agents.base import llm
+from agents.providers import make_llm
 try:
     from graph.state import KnowledgeGraph, KGNode
 except ImportError:
@@ -17,13 +17,7 @@ except ImportError:
     KGNode = None  # type: ignore
 
 # Separate LLM instance for visual KG generation
-_vis_llm = ChatOpenAI(
-    model="deepseek-v3",
-    openai_api_key="EMPTY",
-    openai_api_base="http://118.25.85.143:6400/v1",
-    temperature=0.0,
-    max_tokens=1536,
-)
+_vis_llm = make_llm(max_tokens=1536)
 
 
 def _extract_json_vis(text: str) -> str:
