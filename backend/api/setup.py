@@ -7,7 +7,7 @@ import json
 import re
 import uuid
 from pathlib import Path
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
 from db.session import save_session
 
@@ -154,6 +154,66 @@ async def setup_from_topic(req: TopicRequest):
         syllabus=syllabus,
         topic_summary=syllabus.get("topic_summary", ""),
         initial_score=LEVEL_SCORES[req.level],
+        kg_data=kg_data,
+    )
+
+
+@router.post("/upload", response_model=SetupResponse)
+async def setup_from_upload(
+    file: UploadFile = File(...),
+    level: str = Form("beginner"),
+):
+    if level not in LEVEL_SCORES:
+        raise HTTPException(status_code=400, detail=f"Invalid level: {level}")
+
+    mime_type = file.content_type or "image/jpeg"
+    if not mime_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+
+    image_bytes = await file.read()
+    if len(image_bytes) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Image too large (max 10 MB)")
+
+    # Step 1 — analyze image with vision model
+    from agents.vision import analyze_image
+    try:
+        image_info = await analyze_image(image_bytes, mime_type)
+    except Exception as e:
+        import traceback, logging
+        logging.getLogger(__name__).error("Image analysis failed:\n%s", traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Image analysis failed: {e}")
+
+    topic = image_info["topic"]
+    context = f"{topic}: {image_info['description']}" if image_info["description"] else topic
+
+    # Step 2 — build syllabus from image context
+    from agents.syllabus_builder import build_syllabus
+    try:
+        syllabus = await build_syllabus(context, level)
+    except Exception as e:
+        import traceback, logging
+        logging.getLogger(__name__).error("Syllabus generation failed:\n%s", traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Syllabus generation failed: {e}")
+
+    syllabus["topic"] = topic  # use clean vision-extracted name
+
+    session_id = str(uuid.uuid4())
+    state = _initial_state(session_id, topic, level, syllabus, mode="ai")
+    save_session(session_id, state)
+
+    kg_data: dict = {}
+    try:
+        from agents.kg_builder import build_visual_kg
+        kg_data = await build_visual_kg(topic, syllabus)
+    except Exception:
+        import traceback, logging
+        logging.getLogger(__name__).warning("KG generation failed:\n%s", traceback.format_exc())
+
+    return SetupResponse(
+        session_id=session_id,
+        syllabus=syllabus,
+        topic_summary=syllabus.get("topic_summary", ""),
+        initial_score=LEVEL_SCORES[level],
         kg_data=kg_data,
     )
 

@@ -78,11 +78,12 @@ function playSuccessSound() {
 // ── GeneratingScreen ──────────────────────────────────────────────────────────
 
 function GeneratingScreen({
-  topic, level,
+  topic, level, imageFile,
   onDone,
 }: {
   topic: string
   level: Level
+  imageFile?: File | null
   onDone: (sessionId: string, syllabus: Syllabus, initialScore: number, kgData: KgData) => void
 }) {
   type Stage = "searching" | "analyzing" | "building" | "done"
@@ -100,11 +101,20 @@ function GeneratingScreen({
 
   // Fire API call immediately
   useEffect(() => {
-    fetch(`${API}/setup/topic`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ topic, level, mode: "ai" }),
-    })
+    let fetchPromise: Promise<Response>
+    if (imageFile) {
+      const form = new FormData()
+      form.append("file", imageFile)
+      form.append("level", level)
+      fetchPromise = fetch(`${API}/setup/upload`, { method: "POST", body: form })
+    } else {
+      fetchPromise = fetch(`${API}/setup/topic`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic, level, mode: "ai" }),
+      })
+    }
+    fetchPromise
       .then(r => {
         if (!r.ok) throw new Error(`Server error ${r.status}`)
         return r.json()
@@ -662,8 +672,11 @@ export default function Home() {
   const [syllabus, setSyllabus]           = useState<Syllabus | null>(null)
   const [initialScore, setInitialScore]   = useState(0)
   const [kgData, setKgData]               = useState<KgData>({ nodes: [], edges: [], term_nodes: {} })
+  const [imageFile, setImageFile]         = useState<File | null>(null)
 
-  const topic = topicInput.trim() || "Backpropagation"
+  // For image uploads, use filename (without ext) as display topic
+  const imageTopic = imageFile ? imageFile.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ") : ""
+  const topic = imageFile ? imageTopic : (topicInput.trim() || "Backpropagation")
 
   const handleGenerateDone = (sid: string, syl: Syllabus, score: number, kg: KgData) => {
     setSessionId(sid); setSyllabus(syl); setInitialScore(score); setKgData(kg)
@@ -673,6 +686,7 @@ export default function Home() {
   const handleExit = () => {
     setSessionId(""); setSyllabus(null); setInitialScore(0)
     setKgData({ nodes: [], edges: [], term_nodes: {} })
+    setImageFile(null)
     setScreen("landing")
   }
 
@@ -690,13 +704,58 @@ export default function Home() {
             </p>
           </div>
           <div className="space-y-3">
-            <input
-              value={topicInput}
-              onChange={e => { setTopicInput(e.target.value); setError("") }}
-              placeholder="Topic to learn (e.g. Backpropagation)"
-              className="w-full bg-surface-container-lowest rounded-xl px-5 py-4 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none transition shadow-sm text-[15px]"
-              onKeyDown={e => e.key === "Enter" && setScreen("assess")}
-            />
+            {/* Text input — hidden when image is selected */}
+            {!imageFile && (
+              <input
+                value={topicInput}
+                onChange={e => { setTopicInput(e.target.value); setError("") }}
+                placeholder="Topic to learn (e.g. Backpropagation)"
+                className="w-full bg-surface-container-lowest rounded-xl px-5 py-4 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none transition shadow-sm text-[15px]"
+                onKeyDown={e => e.key === "Enter" && setScreen("assess")}
+              />
+            )}
+
+            {/* Image upload */}
+            {imageFile ? (
+              <div className="flex items-center gap-3 px-4 py-3 rounded-xl"
+                style={{ background: "rgba(0,106,106,0.07)", border: "1.5px solid rgba(0,106,106,0.25)" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={URL.createObjectURL(imageFile)}
+                  alt="preview"
+                  className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-on-surface truncate">{imageFile.name}</p>
+                  <p className="text-xs mt-0.5" style={{ color: "#006a6a" }}>Image ready to analyze</p>
+                </div>
+                <button
+                  onClick={() => setImageFile(null)}
+                  className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center hover:bg-outline/10 transition-colors"
+                  style={{ color: "var(--color-on-surface-variant, #888)" }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <label className="flex items-center justify-center gap-2 w-full py-3 rounded-xl cursor-pointer transition-colors hover:bg-outline/5"
+                style={{ border: "1.5px dashed rgba(0,0,0,0.12)", color: "var(--color-on-surface-variant, #888)" }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
+                </svg>
+                <span className="text-sm">Upload an image</span>
+                <input
+                  type="file" accept="image/*" className="hidden"
+                  onChange={e => {
+                    const f = e.target.files?.[0]
+                    if (f) { setImageFile(f); setTopicInput(""); setError("") }
+                  }}
+                />
+              </label>
+            )}
+
             <button
               className="w-full py-3.5 rounded-xl font-medium hover:opacity-90 transition-opacity"
               style={{ background: "#006a6a", color: "white" }}
@@ -785,7 +844,7 @@ export default function Home() {
 
   // ── Generating ─────────────────────────────────────────────────────────────
   if (screen === "generating") {
-    return <GeneratingScreen topic={topic} level={selectedLevel} onDone={handleGenerateDone} />
+    return <GeneratingScreen topic={topic} level={selectedLevel} imageFile={imageFile} onDone={handleGenerateDone} />
   }
 
   // ── Learning ───────────────────────────────────────────────────────────────
