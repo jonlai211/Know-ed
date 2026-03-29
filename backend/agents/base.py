@@ -27,6 +27,9 @@ JSON_REMINDER = "\n\n[Reminder: reply ONLY with a valid JSON object, no other te
 
 def _extract_json(raw: str) -> dict | None:
     """Extract and parse the first JSON object from raw LLM output."""
+    # Model outputs thinking without opening <think>, only closing </think>
+    if "</think>" in raw:
+        raw = raw.split("</think>")[-1].strip()
     cleaned = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
 
     # Try markdown code block first

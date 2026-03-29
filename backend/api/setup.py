@@ -17,9 +17,10 @@ PREBUILT_SYLLABUS_DIR = Path(__file__).parent.parent / "graph" / "syllabus_data"
 DEMO_SCRIPTS_DIR = Path(__file__).parent.parent / "graph" / "demo_scripts"
 
 LEVEL_SCORES = {
-    "beginner": 20,
+    "novice": 20,
+    "beginner": 20,        # legacy alias
     "intermediate": 40,
-    "advanced": 70,
+    "advanced": 60,
 }
 
 
@@ -129,6 +130,8 @@ async def setup_from_topic(req: TopicRequest):
             try:
                 syllabus = await build_syllabus(req.topic, req.level)
             except Exception as e:
+                import traceback, logging
+                logging.getLogger(__name__).error("Syllabus generation failed:\n%s", traceback.format_exc())
                 raise HTTPException(status_code=500, detail=f"Syllabus generation failed: {e}")
 
     session_id = str(uuid.uuid4())

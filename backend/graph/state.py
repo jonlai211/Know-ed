@@ -52,7 +52,7 @@ class LearningState(MessagesState):
     topic: str
 
     # Student level & score
-    level: Literal["beginner", "intermediate", "advanced"]
+    level: Literal["novice", "beginner", "intermediate", "advanced"]
     score: int  # 0-100
 
     # Syllabus navigation
