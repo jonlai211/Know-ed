@@ -387,7 +387,10 @@ function RealLearningScreen({
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { send } = useSSE({ onEvent: handleEvent })
+  const { send } = useSSE({
+    onEvent: handleEvent,
+    onError: useCallback(() => setIsThinking(false), []),
+  })
 
   // Kick off first teacher message
   useEffect(() => {
